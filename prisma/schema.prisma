@@ -1,0 +1,171 @@
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+
+model User {
+  id            String    @id
+  name          String
+  email         String
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  role          UserRole  @default(STUDENT)
+  sessions      Session[]
+  accounts      Account[]
+
+  tutorProfile  TutorProfile? 
+  bookings      Booking[]     
+  reviews       Review[]      
+
+  @@unique([email])
+  @@map("user")
+}
+
+enum UserRole {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+
+model TutorProfile {
+  id           String   @id @default(uuid())
+  bio          String   @db.Text
+  pricePerHour Float
+  subjects     String[] 
+  rating       Float    @default(0.0)
+  
+
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id])
+  
+  availabilities Availability[]
+  bookings       Booking[]
+  reviews        Review[] 
+
+  @@map("tutor_profile")
+}
+
+model Category {
+  id      String         @id @default(uuid())
+  name    String         @unique
+  tutors  TutorProfile[]
+
+  @@map("category")
+}
+
+model Availability {
+  id        String       @id @default(uuid())
+  day       String       
+  startTime String       
+  endTime   String       
+  
+  tutorId   String
+  tutor     TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@map("availability")
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  date        DateTime
+  slot        String
+  status      BookingStatus @default(CONFIRMED)
+  totalPrice  Float
+  createdAt   DateTime      @default(now())
+
+  studentId   String
+  student     User          @relation(fields: [studentId], references: [id])
+
+  tutorId     String
+  tutor       TutorProfile  @relation(fields: [tutorId], references: [id])
+  
+  review      Review?
+
+  @@map("booking")
+}
+
+enum BookingStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int      
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+
+  tutorId   String
+  tutor     TutorProfile @relation(fields: [tutorId], references: [id])
+
+  @@map("review")
+}
