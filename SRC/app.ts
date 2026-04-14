@@ -2,6 +2,7 @@ import express, { Application } from "express"
 import cors from "cors"
 import { toNodeHandler } from "better-auth/node"
 import { auth } from "./lib/auth"
+import { TutorRouter } from "./modules/tutor/tutor.route"
 
 const app: Application = express()
 app.use(express.json())
@@ -13,7 +14,12 @@ app.use(cors({
 
 app.get('/', (req, res) => {
     res.send('Hello World!')
-})
+});
+
+// TUTOR
+app.use("/api/v1", TutorRouter)
+
+
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
