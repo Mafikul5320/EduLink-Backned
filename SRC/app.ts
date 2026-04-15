@@ -3,6 +3,7 @@ import cors from "cors"
 import { toNodeHandler } from "better-auth/node"
 import { auth } from "./lib/auth"
 import { TutorRouter } from "./modules/tutor/tutor.route"
+import { StudentRouter } from "./modules/student/student.route"
 
 const app: Application = express()
 app.use(express.json())
@@ -17,9 +18,10 @@ app.get('/', (req, res) => {
 });
 
 // TUTOR
-app.use("/api/v1", TutorRouter)
+app.use("/api/v1", TutorRouter);
 
-
+// STUDENT
+app.use("/api/v1", StudentRouter);
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
