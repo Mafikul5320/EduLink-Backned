@@ -28,7 +28,7 @@
 
 
     "esModuleInterop": true,
-    "ignoreDeprecations": "6.0",
+    // "ignoreDeprecations": "6.0",
 
     // Style Options
     // "noImplicitReturns": true,

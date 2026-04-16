@@ -71,7 +71,7 @@ const getTutorDashboardDataFromDB = async (userId: string) => {
         include: {
           _count: { select: { bookings: true, reviews: true } },
           bookings: {
-            take: 5, 
+            take: 5,
             orderBy: { createdAt: 'desc' },
             include: { student: { select: { name: true, image: true } } }
           }
@@ -104,11 +104,70 @@ const updateTutorProfileInDB = async (userId: string, payload: any) => {
   return result;
 };
 
+
+const getAllTutorsFromDB = async (query: any) => {
+  const { searchTerm, categoryId, minPrice, maxPrice, sortBy, sortOrder } = query;
+
+  const whereConditions: any = {};
+
+
+  if (searchTerm) {
+    whereConditions.OR = [
+      { user: { name: { contains: searchTerm, mode: 'insensitive' } } },
+      { subjects: { hasSome: [searchTerm] } },
+    ];
+  }
+
+
+  if (categoryId) {
+    whereConditions.categoryId = categoryId;
+  }
+
+
+  if (minPrice || maxPrice) {
+    whereConditions.pricePerHour = {
+      gte: Number(minPrice) || 0,
+      lte: Number(maxPrice) || 100000,
+    };
+  }
+
+
+  const result = await prisma.tutorProfile.findMany({
+    where: whereConditions,
+    include: {
+      user: { select: { name: true, image: true } },
+      category: true,
+    },
+    orderBy: sortBy && sortOrder ? { [sortBy]: sortOrder } : { rating: 'desc' },
+  });
+
+  return result;
+};
+
+
+const getSingleTutorFromDB = async (id: string) => {
+  const result = await prisma.tutorProfile.findUnique({
+    where: { id },
+    include: {
+      user: { select: { name: true, image: true, email: true } },
+      category: true,
+      availabilities: true,
+      reviews: {
+        include: { student: { select: { name: true, image: true } } },
+        orderBy: { createdAt: 'desc' },
+      },
+    },
+  });
+  return result;
+};
+
 export const TutorService = {
   createCategoryIntoDB,
   getAllCategoriesFromDB,
   setupTutorProfileIntoDB,
   setAvailabilityIntoDB,
   getTutorDashboardDataFromDB,
-  updateTutorProfileInDB
+  updateTutorProfileInDB,
+  getAllTutorsFromDB,
+  getSingleTutorFromDB
 };
