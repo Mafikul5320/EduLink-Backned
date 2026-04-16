@@ -101,9 +101,24 @@ const getStudentDashboardStats = async (userId: string) => {
   return stats;
 };
 
+const updateStudentProfileInDB = async (userId: string, payload: any) => {
+  const { name, image, } = payload;
+
+  const result = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name,
+      image,
+    },
+  });
+
+  return result;
+};
+
 export const StudentService = {
   createBookingIntoDB,
   getMyBookingsFromDB,
   createReviewIntoDB,
-  getStudentDashboardStats
+  getStudentDashboardStats,
+  updateStudentProfileInDB
 };

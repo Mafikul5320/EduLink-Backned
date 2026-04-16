@@ -59,9 +59,29 @@ const getDashboardData = async (req: Request, res: Response) => {
     }
 };
 
+
+const updateProfile = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        const result = await StudentService.updateStudentProfileInDB(userId!, req.body);
+
+        res.status(200).json({
+            success: true,
+            message: 'Student profile updated successfully',
+            data: result,
+        });
+    } catch (error: any) {
+        res.status(400).json({
+            success: false,
+            message: error.message || 'Failed to update profile',
+        });
+    }
+};
+
 export const StudentController = {
     createBooking,
     getMyBookings,
     createReview,
-    getDashboardData
+    getDashboardData,
+    updateProfile
 };

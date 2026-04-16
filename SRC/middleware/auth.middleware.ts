@@ -13,12 +13,16 @@ export const Middleware = (...allowedRoles: string[]) => {
             if (!session.user.emailVerified) {
                 return res.status(401).json({ message: "Unauthorized: Please verify email" });
             };
+            if (session.user.status === "BANNED") {
+                return res.status(401).json({ message: "Unauthorized: Your account Banned" });
+            };
 
             req.user = {
                 id: session.user.id,
                 email: session.user.email,
                 name: session.user.name,
                 role: session.user.role as string,
+                status: session.user.status as string,
                 emailverified: session.user.emailVerified
             }
 

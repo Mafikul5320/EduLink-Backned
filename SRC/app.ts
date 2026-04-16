@@ -4,6 +4,7 @@ import { toNodeHandler } from "better-auth/node"
 import { auth } from "./lib/auth"
 import { TutorRouter } from "./modules/tutor/tutor.route"
 import { StudentRouter } from "./modules/student/student.route"
+import { AdminRoutes } from "./modules/admin/admin.route"
 
 const app: Application = express()
 app.use(express.json())
@@ -22,6 +23,9 @@ app.use("/api/v1", TutorRouter);
 
 // STUDENT
 app.use("/api/v1", StudentRouter);
+
+// ADMIN
+app.use("/api/v1", AdminRoutes)
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 

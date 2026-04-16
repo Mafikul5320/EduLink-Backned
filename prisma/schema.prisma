@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client"
   output   = "../generated/prisma"
@@ -8,23 +7,22 @@ datasource db {
   provider = "postgresql"
 }
 
-
-
 model User {
-  id            String    @id
+  id            String     @id
   name          String
   email         String
-  emailVerified Boolean   @default(false)
+  emailVerified Boolean    @default(false)
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  role          UserRole  @default(STUDENT)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  role          UserRole   @default(STUDENT)
+  status        UserStatus @default(ACTIVE)
   sessions      Session[]
   accounts      Account[]
 
-  tutorProfile  TutorProfile? 
-  bookings      Booking[]     
-  reviews       Review[]      
+  tutorProfile TutorProfile?
+  bookings     Booking[]
+  reviews      Review[]
 
   @@unique([email])
   @@map("user")
@@ -34,6 +32,11 @@ enum UserRole {
   STUDENT
   TUTOR
   ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
 }
 
 model Session {
@@ -84,64 +87,61 @@ model Verification {
   @@map("verification")
 }
 
-
 model TutorProfile {
   id           String   @id @default(uuid())
   bio          String   @db.Text
   pricePerHour Float
-  subjects     String[] 
+  subjects     String[]
   rating       Float    @default(0.0)
-  
 
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  categoryId   String
-  category     Category @relation(fields: [categoryId], references: [id])
-  
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
   availabilities Availability[]
   bookings       Booking[]
-  reviews        Review[] 
+  reviews        Review[]
 
   @@map("tutor_profile")
 }
 
 model Category {
-  id      String         @id @default(uuid())
-  name    String         @unique
-  tutors  TutorProfile[]
+  id     String         @id @default(uuid())
+  name   String         @unique
+  tutors TutorProfile[]
 
   @@map("category")
 }
 
 model Availability {
-  id        String       @id @default(uuid())
-  day       String       
-  startTime String       
-  endTime   String       
-  
-  tutorId   String
-  tutor     TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+  id        String @id @default(uuid())
+  day       String
+  startTime String
+  endTime   String
+
+  tutorId String
+  tutor   TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
 
   @@map("availability")
 }
 
 model Booking {
-  id          String        @id @default(uuid())
-  date        DateTime
-  slot        String
-  status      BookingStatus @default(CONFIRMED)
-  totalPrice  Float
-  createdAt   DateTime      @default(now())
+  id         String        @id @default(uuid())
+  date       DateTime
+  slot       String
+  status     BookingStatus @default(CONFIRMED)
+  totalPrice Float
+  createdAt  DateTime      @default(now())
 
-  studentId   String
-  student     User          @relation(fields: [studentId], references: [id])
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id])
 
-  tutorId     String
-  tutor       TutorProfile  @relation(fields: [tutorId], references: [id])
-  
-  review      Review?
+  tutorId String
+  tutor   TutorProfile @relation(fields: [tutorId], references: [id])
+
+  review Review?
 
   @@map("booking")
 }
@@ -154,18 +154,18 @@ enum BookingStatus {
 
 model Review {
   id        String   @id @default(uuid())
-  rating    Int      
+  rating    Int
   comment   String?  @db.Text
   createdAt DateTime @default(now())
 
-  bookingId String   @unique
-  booking   Booking  @relation(fields: [bookingId], references: [id])
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id])
 
   studentId String
-  student   User     @relation(fields: [studentId], references: [id])
+  student   User   @relation(fields: [studentId], references: [id])
 
-  tutorId   String
-  tutor     TutorProfile @relation(fields: [tutorId], references: [id])
+  tutorId String
+  tutor   TutorProfile @relation(fields: [tutorId], references: [id])
 
   @@map("review")
 }

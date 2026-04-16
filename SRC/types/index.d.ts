@@ -6,10 +6,11 @@ declare global {
                 email: string;
                 name: string;
                 role: string;
+                status: string;
                 emailverified: boolean;
             }
         }
     }
 }
 
-export {}
+export { }

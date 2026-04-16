@@ -9,6 +9,7 @@ router.post('/bookings', Middleware(ROLE.STUDENT), StudentController.createBooki
 router.get('/my-bookings', Middleware(ROLE.STUDENT), StudentController.getMyBookings);
 router.post("/student/review", Middleware(ROLE.STUDENT), StudentController.createReview)
 router.get("/student/dashboard", Middleware(ROLE.STUDENT), StudentController.getDashboardData)
+router.patch("/student/profile/update", Middleware(ROLE.STUDENT), StudentController.updateProfile)
 
 
 export const StudentRouter = router;

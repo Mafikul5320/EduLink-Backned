@@ -15,6 +15,12 @@ export const auth = betterAuth({
                 required: false,
                 defaultValue: "STUDENT",
                 input: false,
+            },
+            status: {
+                type: "string",
+                required: false,
+                defaultValue: "ACTIVE",
+                input: false,
             }
         },
     },
