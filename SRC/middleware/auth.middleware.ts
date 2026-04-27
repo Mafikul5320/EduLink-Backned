@@ -7,6 +7,10 @@ export const Middleware = (...allowedRoles: string[]) => {
             const session = await auth.api.getSession({
                 headers: req.headers as any
             });
+            const sessionToken = req.cookies["_secure-session_token"] || req.cookies["session_token"];
+            if (!sessionToken) {
+                return res.status(401).json({ message: "Unauthorized: No session token provide" });
+            }
             if (!session) {
                 return res.status(401).json({ message: "Unauthorized: No session found" });
             };
@@ -29,10 +33,10 @@ export const Middleware = (...allowedRoles: string[]) => {
 
 
             console.log(req.user)
-            if (allowedRoles.length && !allowedRoles.includes(req.user?.role as string)) {
-                return res.status(500).json({
-                    sucess: false,
-                    error: "Unauthorized...",
+            if (allowedRoles.length && (!req.user?.role || !allowedRoles.includes((req.user.role as string).toUpperCase()))) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Unauthorized: You do not have permission to perform this action",
                 })
             }
 

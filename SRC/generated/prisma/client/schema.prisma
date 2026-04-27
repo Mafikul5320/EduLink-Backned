@@ -1,0 +1,163 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../SRC/generated/prisma/client"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id                    String    @id @default(uuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Availability {
+  id        String       @id @default(uuid())
+  day       String
+  startTime String
+  endTime   String
+  tutorId   String
+  tutor     TutorProfile @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  @@map("availability")
+}
+
+model Booking {
+  id            String        @id @default(uuid())
+  date          DateTime
+  slot          String
+  status        BookingStatus @default(PENDING)
+  totalPrice    Float
+  createdAt     DateTime      @default(now())
+  studentId     String
+  tutorId       String
+  transactionId String?       @unique
+  student       User          @relation(fields: [studentId], references: [id])
+  tutor         TutorProfile  @relation(fields: [tutorId], references: [id])
+  review        Review?
+
+  @@map("booking")
+}
+
+model Category {
+  id            String         @id @default(uuid())
+  name          String         @unique
+  tutorProfiles TutorProfile[]
+
+  @@map("category")
+}
+
+model Review {
+  id        String       @id @default(uuid())
+  rating    Int
+  comment   String?
+  createdAt DateTime     @default(now())
+  bookingId String       @unique
+  studentId String
+  tutorId   String
+  booking   Booking      @relation(fields: [bookingId], references: [id])
+  student   User         @relation(fields: [studentId], references: [id])
+  tutor     TutorProfile @relation(fields: [tutorId], references: [id])
+
+  @@map("review")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model TutorProfile {
+  id             String         @id @default(uuid())
+  bio            String
+  pricePerHour   Float
+  subjects       String[]
+  rating         Float          @default(0.0)
+  userId         String         @unique
+  categoryId     String
+  availabilities Availability[]
+  bookings       Booking[]
+  reviews        Review[]
+  category       Category       @relation(fields: [categoryId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tutor_profile")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  role          UserRole      @default(STUDENT)
+  status        UserStatus    @default(ACTIVE)
+  accounts      Account[]
+  bookings      Booking[]
+  reviews       Review[]
+  sessions      Session[]
+  tutorProfile  TutorProfile?
+
+  @@map("user")
+}
+
+model Verification {
+  id         String   @id @default(uuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+enum BookingStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  PENDING
+  PAID
+  FAILED
+}
+
+enum UserRole {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}

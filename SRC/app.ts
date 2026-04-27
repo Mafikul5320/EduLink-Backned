@@ -5,6 +5,7 @@ import { auth } from "./lib/auth"
 import { TutorRouter } from "./modules/tutor/tutor.route"
 import { StudentRouter } from "./modules/student/student.route"
 import { AdminRoutes } from "./modules/admin/admin.route"
+import { PaymentRouter } from "./modules/payment/payment.route"
 import notFound from "./middleware/notFound"
 import globalErrorHandler from "./middleware/globalErrorHandler"
 
@@ -28,6 +29,9 @@ app.use("/api/v1", StudentRouter);
 
 // ADMIN
 app.use("/api/v1", AdminRoutes)
+
+// PAYMENT
+app.use("/api/payment", PaymentRouter);
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 

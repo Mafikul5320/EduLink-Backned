@@ -14,5 +14,7 @@ router.get("/all/data/tutor", Middleware(ROLE.TUTOR), TutorController.getDashboa
 router.patch("/all/data/tutor", Middleware(ROLE.TUTOR), TutorController.updateProfile)
 router.get('/tutor/filter', TutorController.getAllTutors);
 router.get('/tutor/:id', TutorController.getSingleTutor);
+router.get('/public/tutors', TutorController.getAllTutorProfiles);
+router.post('/create/tutor-profile', Middleware(ROLE.TUTOR), TutorController.createTutorProfile);
 
 export const TutorRouter = router;

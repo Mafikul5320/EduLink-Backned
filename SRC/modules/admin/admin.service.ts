@@ -25,6 +25,7 @@ const getAllUsersFromDB = async () => {
       name: true,
       email: true,
       role: true,
+      status: true,
       createdAt: true,
 
     }
@@ -35,7 +36,7 @@ const updateUserStatusInDB = async (userId: string, status: any) => {
 
   return await prisma.user.update({
     where: { id: userId },
-    data: { status: status as any } 
+    data: { status: status as any }
   });
 };
 

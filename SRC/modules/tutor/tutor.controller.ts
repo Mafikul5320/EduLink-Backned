@@ -117,6 +117,34 @@ const getSingleTutor = async (req: Request, res: Response, next: NextFunction) =
   }
 };
 
+const getAllTutorProfiles = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await TutorService.getAllTutorProfilesFromDB();
+    res.status(200).json({
+      success: true,
+      message: 'All tutor profiles fetched successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const createTutorProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    const tutorData = req.body;
+    const result = await TutorService.createTutorProfileInDB(userId as string, tutorData);
+    res.status(201).json({
+      success: true,
+      message: 'Tutor profile created successfully',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const TutorController = {
   createCategory,
   getAllCategories,
@@ -126,4 +154,6 @@ export const TutorController = {
   updateProfile,
   getAllTutors,
   getSingleTutor,
+  getAllTutorProfiles,
+  createTutorProfile,
 };

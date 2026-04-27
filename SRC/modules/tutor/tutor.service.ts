@@ -74,7 +74,8 @@ const getTutorDashboardDataFromDB = async (userId: string) => {
             take: 5,
             orderBy: { createdAt: 'desc' },
             include: { student: { select: { name: true, image: true } } }
-          }
+          },
+          availabilities: true
         }
       }
     }
@@ -103,7 +104,6 @@ const updateTutorProfileInDB = async (userId: string, payload: any) => {
 
   return result;
 };
-
 
 const getAllTutorsFromDB = async (query: any) => {
   const { searchTerm, categoryId, minPrice, maxPrice, sortBy, sortOrder } = query;
@@ -137,13 +137,13 @@ const getAllTutorsFromDB = async (query: any) => {
     include: {
       user: { select: { name: true, image: true } },
       category: true,
+      availabilities: true
     },
     orderBy: sortBy && sortOrder ? { [sortBy]: sortOrder } : { rating: 'desc' },
   });
 
   return result;
 };
-
 
 const getSingleTutorFromDB = async (id: string) => {
   const result = await prisma.tutorProfile.findUnique({
@@ -161,6 +161,50 @@ const getSingleTutorFromDB = async (id: string) => {
   return result;
 };
 
+const getAllTutorProfilesFromDB = async () => {
+  const result = await prisma.tutorProfile.findMany({
+    include: {
+      user: { select: { name: true, image: true } },
+      category: true,
+      reviews: {
+        select: { rating: true },
+      },
+    },
+  });
+  return result;
+};
+
+const createTutorProfileInDB = async (userId: string, tutorData: any) => {
+  const isTutorExists = await prisma.tutorProfile.findUnique({
+    where: { userId },
+  });
+
+  if (isTutorExists) {
+    throw new Error('You are already a tutor!');
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const newProfile = await tx.tutorProfile.create({
+      data: {
+        userId: userId,
+        bio: tutorData.bio,
+        pricePerHour: tutorData.pricePerHour,
+        subjects: tutorData.subjects,
+        categoryId: tutorData.categoryId,
+      },
+    });
+
+    await tx.user.update({
+      where: { id: userId },
+      data: { role: 'TUTOR' },
+    });
+
+    return newProfile;
+  });
+
+  return result;
+};
+
 export const TutorService = {
   createCategoryIntoDB,
   getAllCategoriesFromDB,
@@ -169,5 +213,7 @@ export const TutorService = {
   getTutorDashboardDataFromDB,
   updateTutorProfileInDB,
   getAllTutorsFromDB,
-  getSingleTutorFromDB
+  getSingleTutorFromDB,
+  getAllTutorProfilesFromDB,
+  createTutorProfileInDB
 };

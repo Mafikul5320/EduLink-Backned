@@ -1,11 +1,15 @@
 {
   "name": "Assignment-4-(Backend)",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "pnpm dlx tsx watch ./src/server.ts"
+    "dev": "pnpm dlx tsx watch ./SRC/server.ts",
+    "build": "npx prisma generate && tsup",
+    "postinstall": "prisma generate",
+    "start": "node dist/server.mjs"
   },
   "keywords": [],
   "author": "",
@@ -16,18 +20,23 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.20.0",
+    "npm": "^11.13.0",
     "prisma": "^7.7.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
+    "@prisma/client-runtime-utils": "^7.8.0",
     "better-auth": "^1.6.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "pg": "^8.20.0"
+    "pg": "^8.20.0",
+    "sslcommerz-lts": "^1.2.0",
+    "zod": "^4.3.6"
   }
 }
