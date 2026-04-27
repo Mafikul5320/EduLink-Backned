@@ -2,16 +2,17 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDir": "./SRC",
+    "rootDir": "./src",
     "outDir": "./dist",
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
      "module": "ESNext",
+    "moduleResolution": "bundler",
     "target": "ES2023",
-    // "types": [],
+  
     // For nodejs:
-    // "lib": ["esnext"],
+    "lib": ["esnext"],
     "types": ["node"],
     // and npm install -D @types/node
 
@@ -24,12 +25,6 @@
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    "moduleResolution": "bundler",
-
-
-    "esModuleInterop": true,
-    // "ignoreDeprecations": "6.0",
-
     // Style Options
     // "noImplicitReturns": true,
     // "noImplicitOverride": true,
@@ -40,11 +35,14 @@
 
     // Recommended Options
     "strict": true,
-    // "jsx": "react-jsx",
+    "jsx": "react-jsx",
+        "esModuleInterop": true,
     // "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
-  }
+  },
+    "include": ["src/**/*"],
+  "exclude": []
 }

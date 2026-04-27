@@ -1,7 +1,6 @@
 generator client {
-  provider        = "prisma-client-js"
-  output          = "../SRC/generated/prisma/client"
-  previewFeatures = ["driverAdapters"]
+  provider        = "prisma-client"
+  output          = "../src/generated"
 }
 
 datasource db {
@@ -95,18 +94,18 @@ model Session {
 }
 
 model TutorProfile {
-  id           String         @id @default(uuid())
-  bio          String
-  pricePerHour Float
-  subjects     String[]
-  rating       Float          @default(0.0)
-  userId       String         @unique
-  categoryId   String
+  id             String         @id @default(uuid())
+  bio            String
+  pricePerHour   Float
+  subjects       String[]
+  rating         Float          @default(0.0)
+  userId         String         @unique
+  categoryId     String
   availabilities Availability[]
-  bookings      Booking[]
-  reviews       Review[]
-  category     Category       @relation(fields: [categoryId], references: [id])
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings       Booking[]
+  reviews        Review[]
+  category       Category       @relation(fields: [categoryId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("tutor_profile")
 }

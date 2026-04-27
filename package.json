@@ -6,10 +6,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "pnpm dlx tsx watch ./SRC/server.ts",
+    "dev": "pnpm dlx tsx watch ./src/server.ts",
     "build": "npx prisma generate && tsup",
     "postinstall": "prisma generate",
-    "start": "node dist/server.mjs"
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",

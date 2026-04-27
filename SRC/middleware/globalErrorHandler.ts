@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { Prisma } from "../generated/prisma/client";
+import { Prisma } from "../generated/client";
+
 
 function globalErrorHandler(
   err: unknown,

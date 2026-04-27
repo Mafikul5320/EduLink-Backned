@@ -2,17 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "SRC/app.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["SRC/generated/prisma/client/**"]
-      }
+      "src": "dist/server.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "SRC/app.ts"
+      "dest": "dist/server.js"
     }
   ]
 }

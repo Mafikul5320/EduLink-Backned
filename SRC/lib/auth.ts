@@ -1,7 +1,8 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma";
+
 import { oAuthProxy } from "better-auth/plugins";
+import { prisma } from "./prisma";
 
 export const auth = betterAuth({
     baseURL: process.env.APP_URL,
