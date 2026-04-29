@@ -6,9 +6,12 @@ async function main() {
     try {
         await prisma.$connect();
         console.log("Database connect sucessfull..")
-        app.listen(port, () => {
-            console.log(`server is running on port ${port}`)
-        })
+        
+        if (process.env.NODE_ENV !== 'production') {
+            app.listen(port, () => {
+                console.log(`server is running on port ${port}`)
+            })
+        }
     } catch (error) {
         console.log(error)
         await prisma.$disconnect()
@@ -16,3 +19,5 @@ async function main() {
     }
 }
 main()
+
+export default app;

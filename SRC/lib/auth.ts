@@ -31,27 +31,34 @@ export const auth = betterAuth({
         // requireEmailVerification: false
     },
     // for deploy
+    session: {
+        cookieCache: {
+            enabled: true,
+            maxAge: 5 * 60, // 5 minutes
+        },
+    },
     advanced: {
         cookies: {
             session_token: {
-                name: "session_token",
+                name: "session_token", // Force this exact name
                 attributes: {
                     httpOnly: true,
                     secure: true,
                     sameSite: "none",
-                    partitioned: true
-                }
+                    partitioned: true,
+                },
             },
             state: {
-                name: "session_token",
+                name: "session_token", // Force this exact name
                 attributes: {
                     httpOnly: true,
                     secure: true,
                     sameSite: "none",
-                    partitioned: true
-                }
-            }
-        }
+                    partitioned: true,
+                },
+            },
+        },
     },
+
     plugins: [oAuthProxy()]
 });
