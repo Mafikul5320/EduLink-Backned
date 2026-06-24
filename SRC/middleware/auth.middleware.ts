@@ -7,19 +7,27 @@ export const Middleware = (...allowedRoles: string[]) => {
             const session = await auth.api.getSession({
                 headers: req.headers as any
             });
-            const sessionToken = req.cookies["_secure-session_token"] || req.cookies["session_token"];
-            if (!sessionToken) {
-                return res.status(401).json({ message: "Unauthorized: No session token provide" });
-            }
+            
             if (!session) {
-                return res.status(401).json({ message: "Unauthorized: No session found" });
-            };
+                return res.status(401).json({ 
+                    success: false,
+                    message: "Unauthorized: No session found" 
+                });
+            }
+            
             if (!session.user.emailVerified) {
-                return res.status(401).json({ message: "Unauthorized: Please verify email" });
-            };
+                return res.status(401).json({ 
+                    success: false,
+                    message: "Unauthorized: Please verify email" 
+                });
+            }
+            
             if (session.user.status === "BANNED") {
-                return res.status(401).json({ message: "Unauthorized: Your account Banned" });
-            };
+                return res.status(403).json({ 
+                    success: false,
+                    message: "Forbidden: Your account has been banned" 
+                });
+            }
 
             req.user = {
                 id: session.user.id,
@@ -30,18 +38,18 @@ export const Middleware = (...allowedRoles: string[]) => {
                 emailverified: session.user.emailVerified
             }
 
+            console.log("Authenticated user:", req.user);
 
-
-            console.log(req.user)
             if (allowedRoles.length && (!req.user?.role || !allowedRoles.includes((req.user.role as string).toUpperCase()))) {
                 return res.status(403).json({
                     success: false,
-                    message: "Unauthorized: You do not have permission to perform this action",
+                    message: "Forbidden: You do not have permission to perform this action",
                 })
             }
 
             next()
         } catch (error) {
+            console.error("Auth middleware error:", error);
             next(error)
         }
     }

@@ -1,10 +1,38 @@
+# Dependencies
 node_modules
-# Keep environment variables out of version control
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
 .env
+.env.local
+.env.production
 
-/generated/prisma
+# Build output
 /dist
+/build
 
+# Prisma
+/generated/prisma
+/src/generated/prisma
+
+# Vercel
 .vercel
 
-.vercel
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output

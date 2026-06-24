@@ -4,9 +4,13 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { oAuthProxy } from "better-auth/plugins";
 import { prisma } from "./prisma";
 
+const isDevelopment = process.env.NODE_ENV === "development";
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+const backendUrl = process.env.APP_URL || "http://localhost:5000";
+
 export const auth = betterAuth({
-    baseURL: process.env.APP_URL,
-    trustedOrigins: [process.env.APP_URL as string],
+    baseURL: backendUrl,
+    trustedOrigins: [frontendUrl, backendUrl],
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
@@ -30,7 +34,6 @@ export const auth = betterAuth({
         autoSignIn: false,
         // requireEmailVerification: false
     },
-    // for deploy
     session: {
         cookieCache: {
             enabled: true,
@@ -40,25 +43,17 @@ export const auth = betterAuth({
     advanced: {
         cookies: {
             session_token: {
-                name: "session_token", // Force this exact name
+                name: "better-auth.session_token",
                 attributes: {
                     httpOnly: true,
-                    secure: true,
-                    sameSite: "none",
-                    partitioned: true,
-                },
-            },
-            state: {
-                name: "session_token", // Force this exact name
-                attributes: {
-                    httpOnly: true,
-                    secure: true,
-                    sameSite: "none",
-                    partitioned: true,
+                    secure: !isDevelopment, // true in production, false in development
+                    sameSite: isDevelopment ? "lax" : "none",
+                    path: "/",
+                    ...(isDevelopment ? {} : { partitioned: true }),
                 },
             },
         },
     },
 
-    plugins: [oAuthProxy()]
+    // plugins: [oAuthProxy()]
 });

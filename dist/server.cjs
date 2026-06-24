@@ -6593,12 +6593,12 @@ module.exports = __toCommonJS(server_exports);
 // src/app.ts
 var import_express5 = __toESM(require("express"), 1);
 var import_cors = __toESM(require("cors"), 1);
+var import_cookie_parser = __toESM(require("cookie-parser"), 1);
 var import_node = require("better-auth/node");
 
 // src/lib/auth.ts
 var import_better_auth = require("better-auth");
 var import_prisma = require("better-auth/adapters/prisma");
-var import_plugins = require("better-auth/plugins");
 
 // src/lib/prisma.ts
 var import_config = require("dotenv/config");
@@ -6609,9 +6609,12 @@ var adapter = new import_adapter_pg.PrismaPg({ connectionString });
 var prisma = new import_client.PrismaClient({ adapter, log: ["query", "info", "warn", "error"] });
 
 // src/lib/auth.ts
+var isDevelopment = process.env.NODE_ENV === "development";
+var frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+var backendUrl = process.env.APP_URL || "http://localhost:5000";
 var auth = (0, import_better_auth.betterAuth)({
-  baseURL: process.env.APP_URL,
-  trustedOrigins: [process.env.APP_URL],
+  baseURL: backendUrl,
+  trustedOrigins: [frontendUrl, backendUrl],
   database: (0, import_prisma.prismaAdapter)(prisma, {
     provider: "postgresql"
   }),
@@ -6635,7 +6638,6 @@ var auth = (0, import_better_auth.betterAuth)({
     autoSignIn: false
     // requireEmailVerification: false
   },
-  // for deploy
   session: {
     cookieCache: {
       enabled: true,
@@ -6646,28 +6648,19 @@ var auth = (0, import_better_auth.betterAuth)({
   advanced: {
     cookies: {
       session_token: {
-        name: "session_token",
-        // Force this exact name
+        name: "better-auth.session_token",
         attributes: {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          partitioned: true
-        }
-      },
-      state: {
-        name: "session_token",
-        // Force this exact name
-        attributes: {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          partitioned: true
+          secure: !isDevelopment,
+          // true in production, false in development
+          sameSite: isDevelopment ? "lax" : "none",
+          path: "/",
+          ...isDevelopment ? {} : { partitioned: true }
         }
       }
     }
-  },
-  plugins: [(0, import_plugins.oAuthProxy)()]
+  }
+  // plugins: [oAuthProxy()]
 });
 
 // src/modules/tutor/tutor.route.ts
@@ -7005,22 +6998,24 @@ var Middleware = (...allowedRoles) => {
       const session = await auth.api.getSession({
         headers: req.headers
       });
-      const sessionToken = req.cookies["_secure-session_token"] || req.cookies["session_token"];
-      if (!sessionToken) {
-        return res.status(401).json({ message: "Unauthorized: No session token provide" });
-      }
       if (!session) {
-        return res.status(401).json({ message: "Unauthorized: No session found" });
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: No session found"
+        });
       }
-      ;
       if (!session.user.emailVerified) {
-        return res.status(401).json({ message: "Unauthorized: Please verify email" });
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized: Please verify email"
+        });
       }
-      ;
       if (session.user.status === "BANNED") {
-        return res.status(401).json({ message: "Unauthorized: Your account Banned" });
+        return res.status(403).json({
+          success: false,
+          message: "Forbidden: Your account has been banned"
+        });
       }
-      ;
       req.user = {
         id: session.user.id,
         email: session.user.email,
@@ -7029,15 +7024,16 @@ var Middleware = (...allowedRoles) => {
         status: session.user.status,
         emailverified: session.user.emailVerified
       };
-      console.log(req.user);
+      console.log("Authenticated user:", req.user);
       if (allowedRoles.length && (!req.user?.role || !allowedRoles.includes(req.user.role.toUpperCase()))) {
         return res.status(403).json({
           success: false,
-          message: "Unauthorized: You do not have permission to perform this action"
+          message: "Forbidden: You do not have permission to perform this action"
         });
       }
       next();
     } catch (error) {
+      console.error("Auth middleware error:", error);
       next(error);
     }
   };
@@ -7906,19 +7902,21 @@ var globalErrorHandler_default = globalErrorHandler;
 // src/app.ts
 var app = (0, import_express5.default)();
 app.use(import_express5.default.json());
+app.use((0, import_cookie_parser.default)());
 var allowedOrigins = [
-  process.env.APP_URL || "http://localhost:3000",
-  process.env.PROD_APP_URL
+  process.env.FRONTEND_URL || "http://localhost:3000",
+  process.env.PROD_FRONTEND_URL
   // Production frontend URL
 ].filter(Boolean);
 app.use(
   (0, import_cors.default)({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.includes(origin) || /^https:\/\/next-blog-client.*\.vercel\.app$/.test(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
+      const isAllowed = allowedOrigins.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
       if (isAllowed) {
         callback(null, true);
       } else {
+        console.log(`Origin ${origin} blocked by CORS`);
         callback(new Error(`Origin ${origin} not allowed by CORS`));
       }
     },
