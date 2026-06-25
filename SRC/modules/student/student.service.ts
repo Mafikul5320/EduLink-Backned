@@ -115,10 +115,34 @@ const updateStudentProfileInDB = async (userId: string, payload: any) => {
   return result;
 };
 
+const getMyReviewsFromDB = async (studentId: string) => {
+  const result = await prisma.review.findMany({
+    where: { studentId },
+    include: {
+      tutor: {
+        include: {
+          user: { select: { name: true, image: true } },
+          category: true,
+        }
+      },
+      booking: {
+        select: {
+          date: true,
+          slot: true,
+          totalPrice: true,
+        }
+      }
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return result;
+};
+
 export const StudentService = {
   createBookingIntoDB,
   getMyBookingsFromDB,
   createReviewIntoDB,
   getStudentDashboardStats,
-  updateStudentProfileInDB
+  updateStudentProfileInDB,
+  getMyReviewsFromDB
 };

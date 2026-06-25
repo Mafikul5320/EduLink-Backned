@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { PaymentService } from "./payment.service";
 import { ISSLCommerzCallbackPayload } from "./payment.interface";
 
-const FRONTEND_URL = process.env.APP_URL || "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 /**
  * POST /api/payment/initiate

@@ -69,10 +69,25 @@ const updateProfile = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+const getMyReviews = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const studentId = req.user?.id;
+        const result = await StudentService.getMyReviewsFromDB(studentId!);
+        res.status(200).json({
+            success: true,
+            message: 'Reviews fetched successfully',
+            data: result,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const StudentController = {
     createBooking,
     getMyBookings,
     createReview,
     getDashboardData,
     updateProfile,
+    getMyReviews,
 };

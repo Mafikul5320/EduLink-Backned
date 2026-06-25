@@ -7001,12 +7001,6 @@ var Middleware = (...allowedRoles) => {
           message: "Unauthorized: No session found"
         });
       }
-      if (!session.user.emailVerified) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized: Please verify email"
-        });
-      }
       if (session.user.status === "BANNED") {
         return res.status(403).json({
           success: false,
@@ -7045,7 +7039,8 @@ var ROLE = {
 
 // src/modules/tutor/tutor.route.ts
 var router = express.Router();
-router.post("/create/category", Middleware(ROLE.ADMIN), TutorController.createCategory), router.get("/all/category", TutorController.getAllCategories), router.patch("/upadte/tutor", Middleware(ROLE.ADMIN), TutorController.setupProfile);
+router.post("/create/category", Middleware(ROLE.ADMIN), TutorController.createCategory);
+router.get("/all/category", TutorController.getAllCategories);
 router.post("/availability/tutor", Middleware(ROLE.TUTOR), TutorController.manageAvailability);
 router.get("/all/data/tutor", Middleware(ROLE.TUTOR), TutorController.getDashboardData);
 router.patch("/all/data/tutor", Middleware(ROLE.TUTOR), TutorController.updateProfile);
@@ -7148,12 +7143,35 @@ var updateStudentProfileInDB = async (userId, payload) => {
   });
   return result;
 };
+var getMyReviewsFromDB = async (studentId) => {
+  const result = await prisma.review.findMany({
+    where: { studentId },
+    include: {
+      tutor: {
+        include: {
+          user: { select: { name: true, image: true } },
+          category: true
+        }
+      },
+      booking: {
+        select: {
+          date: true,
+          slot: true,
+          totalPrice: true
+        }
+      }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+  return result;
+};
 var StudentService = {
   createBookingIntoDB,
   getMyBookingsFromDB,
   createReviewIntoDB,
   getStudentDashboardStats,
-  updateStudentProfileInDB
+  updateStudentProfileInDB,
+  getMyReviewsFromDB
 };
 
 // src/modules/student/student.controller.ts
@@ -7220,12 +7238,26 @@ var updateProfile2 = async (req, res, next) => {
     next(error);
   }
 };
+var getMyReviews = async (req, res, next) => {
+  try {
+    const studentId = req.user?.id;
+    const result = await StudentService.getMyReviewsFromDB(studentId);
+    res.status(200).json({
+      success: true,
+      message: "Reviews fetched successfully",
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 var StudentController = {
   createBooking,
   getMyBookings,
   createReview,
   getDashboardData: getDashboardData2,
-  updateProfile: updateProfile2
+  updateProfile: updateProfile2,
+  getMyReviews
 };
 
 // src/modules/student/student.route.ts
@@ -7235,6 +7267,7 @@ router2.get("/my-bookings", Middleware(ROLE.STUDENT), StudentController.getMyBoo
 router2.post("/student/review", Middleware(ROLE.STUDENT), StudentController.createReview);
 router2.get("/student/dashboard", Middleware(ROLE.STUDENT), StudentController.getDashboardData);
 router2.patch("/student/profile/update", Middleware(ROLE.STUDENT), StudentController.updateProfile);
+router2.get("/student/my-reviews", Middleware(ROLE.STUDENT), StudentController.getMyReviews);
 var StudentRouter = router2;
 
 // src/modules/admin/admin.route.ts
@@ -7245,16 +7278,13 @@ var getAdminDashboardStatsFromDB = async () => {
   const totalUsers = await prisma.user.count();
   const totalTutors = await prisma.tutorProfile.count();
   const totalBookings = await prisma.booking.count();
-  const totalRevenue = await prisma.booking.aggregate({
-    where: { status: "COMPLETED" },
-    _sum: { totalPrice: true }
-  });
+  const activeCategories = await prisma.category.count();
   return {
     totalUsers,
     totalTutors,
     totalStudents: totalUsers - totalTutors,
     totalBookings,
-    totalRevenue: totalRevenue._sum.totalPrice || 0
+    activeCategories
   };
 };
 var getAllUsersFromDB = async () => {
@@ -7284,11 +7314,24 @@ var getAllBookingsFromDB = async () => {
     orderBy: { createdAt: "desc" }
   });
 };
+var updateCategoryInDB = async (categoryId, name) => {
+  return await prisma.category.update({
+    where: { id: categoryId },
+    data: { name }
+  });
+};
+var deleteCategoryFromDB = async (categoryId) => {
+  return await prisma.category.delete({
+    where: { id: categoryId }
+  });
+};
 var AdminService = {
   getAdminDashboardStatsFromDB,
   getAllUsersFromDB,
   updateUserStatusInDB,
-  getAllBookingsFromDB
+  getAllBookingsFromDB,
+  updateCategoryInDB,
+  deleteCategoryFromDB
 };
 
 // src/modules/admin/admin.controller.ts
@@ -7326,11 +7369,32 @@ var getAllBookings = async (req, res, next) => {
     next(error);
   }
 };
+var updateCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const result = await AdminService.updateCategoryInDB(id, name);
+    res.status(200).json({ success: true, message: "Category updated successfully", data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteCategory = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const result = await AdminService.deleteCategoryFromDB(id);
+    res.status(200).json({ success: true, message: "Category deleted successfully", data: result });
+  } catch (error) {
+    next(error);
+  }
+};
 var AdminController = {
   getDashboardStats,
   getAllUsers,
   changeUserStatus,
-  getAllBookings
+  getAllBookings,
+  updateCategory,
+  deleteCategory
 };
 
 // src/modules/admin/admin.route.ts
@@ -7339,6 +7403,8 @@ router3.get("/dashboard", Middleware(ROLE.ADMIN), AdminController.getDashboardSt
 router3.get("/users", Middleware(ROLE.ADMIN), AdminController.getAllUsers);
 router3.patch("/users/:userId/status", Middleware(ROLE.ADMIN), AdminController.changeUserStatus);
 router3.get("/bookings", Middleware(ROLE.ADMIN), AdminController.getAllBookings);
+router3.patch("/category/:id", Middleware(ROLE.ADMIN), AdminController.updateCategory);
+router3.delete("/category/:id", Middleware(ROLE.ADMIN), AdminController.deleteCategory);
 var AdminRoutes = router3;
 
 // src/modules/payment/payment.route.ts
@@ -7351,7 +7417,7 @@ var STORE_ID = process.env.STORE_ID;
 var STORE_PASSWORD = process.env.STORE_PASSWORD;
 var IS_LIVE = process.env.NODE_ENV === "production";
 var BACKEND_URL = process.env.APP_URL || "http://localhost:5000";
-var FRONTEND_URL = process.env.APP_URL || "http://localhost:3000";
+var FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 var generateTransactionId = () => {
   const timestamp = Date.now().toString(36);
   const randomPart = crypto.randomBytes(8).toString("hex");
@@ -7514,7 +7580,7 @@ var PaymentService = {
 };
 
 // src/modules/payment/payment.controller.ts
-var FRONTEND_URL2 = process.env.APP_URL || "http://localhost:3000";
+var FRONTEND_URL2 = process.env.FRONTEND_URL || "http://localhost:3000";
 var initiatePayment2 = async (req, res, next) => {
   try {
     const studentId = req.user?.id;
@@ -7897,6 +7963,13 @@ var globalErrorHandler_default = globalErrorHandler;
 
 // src/app.ts
 var app = express5();
+app.use(cors({
+  origin: ["http://localhost:3000", "http://localhost:5000"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express5.json());
 app.use(cookieParser());
 var allowedOrigins = [
@@ -7904,24 +7977,6 @@ var allowedOrigins = [
   process.env.PROD_FRONTEND_URL
   // Production frontend URL
 ].filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.includes(origin) || /^https:\/\/.*\.vercel\.app$/.test(origin);
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.log(`Origin ${origin} blocked by CORS`);
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposedHeaders: ["Set-Cookie"]
-  })
-);
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
@@ -7929,7 +7984,6 @@ app.use("/api/v1", TutorRouter);
 app.use("/api/v1", StudentRouter);
 app.use("/api/v1", AdminRoutes);
 app.use("/api/payment", PaymentRouter);
-app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(notFound_default);
 app.use(globalErrorHandler_default);
 var app_default = app;

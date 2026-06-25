@@ -4,17 +4,14 @@ const getAdminDashboardStatsFromDB = async () => {
   const totalUsers = await prisma.user.count();
   const totalTutors = await prisma.tutorProfile.count();
   const totalBookings = await prisma.booking.count();
-  const totalRevenue = await prisma.booking.aggregate({
-    where: { status: 'COMPLETED' },
-    _sum: { totalPrice: true }
-  });
+  const activeCategories = await prisma.category.count();
 
   return {
     totalUsers,
     totalTutors,
     totalStudents: totalUsers - totalTutors,
     totalBookings,
-    totalRevenue: totalRevenue._sum.totalPrice || 0
+    activeCategories,
   };
 };
 
@@ -50,9 +47,24 @@ const getAllBookingsFromDB = async () => {
   });
 };
 
+const updateCategoryInDB = async (categoryId: string, name: string) => {
+  return await prisma.category.update({
+    where: { id: categoryId },
+    data: { name }
+  });
+};
+
+const deleteCategoryFromDB = async (categoryId: string) => {
+  return await prisma.category.delete({
+    where: { id: categoryId }
+  });
+};
+
 export const AdminService = {
   getAdminDashboardStatsFromDB,
   getAllUsersFromDB,
   updateUserStatusInDB,
-  getAllBookingsFromDB
+  getAllBookingsFromDB,
+  updateCategoryInDB,
+  deleteCategoryFromDB
 };

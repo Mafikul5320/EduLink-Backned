@@ -10,5 +10,7 @@ router.get('/dashboard', Middleware(ROLE.ADMIN), AdminController.getDashboardSta
 router.get('/users',Middleware(ROLE.ADMIN), AdminController.getAllUsers);
 router.patch('/users/:userId/status',Middleware(ROLE.ADMIN), AdminController.changeUserStatus);
 router.get('/bookings',Middleware(ROLE.ADMIN), AdminController.getAllBookings);
+router.patch('/category/:id', Middleware(ROLE.ADMIN), AdminController.updateCategory);
+router.delete('/category/:id', Middleware(ROLE.ADMIN), AdminController.deleteCategory);
 
 export const AdminRoutes = router;

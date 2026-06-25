@@ -10,6 +10,7 @@ router.get('/my-bookings', Middleware(ROLE.STUDENT), StudentController.getMyBook
 router.post("/student/review", Middleware(ROLE.STUDENT), StudentController.createReview)
 router.get("/student/dashboard", Middleware(ROLE.STUDENT), StudentController.getDashboardData)
 router.patch("/student/profile/update", Middleware(ROLE.STUDENT), StudentController.updateProfile)
+router.get("/student/my-reviews", Middleware(ROLE.STUDENT), StudentController.getMyReviews)
 
 
 export const StudentRouter = router;

@@ -15,12 +15,12 @@ export const Middleware = (...allowedRoles: string[]) => {
                 });
             }
             
-            if (!session.user.emailVerified) {
-                return res.status(401).json({ 
-                    success: false,
-                    message: "Unauthorized: Please verify email" 
-                });
-            }
+            // if (!session.user.emailVerified) {
+            //     return res.status(401).json({ 
+            //         success: false,
+            //         message: "Unauthorized: Please verify email" 
+            //     });
+            // }
             
             if (session.user.status === "BANNED") {
                 return res.status(403).json({ 

@@ -8,7 +8,7 @@ const STORE_ID = process.env.STORE_ID!;
 const STORE_PASSWORD = process.env.STORE_PASSWORD!;
 const IS_LIVE = process.env.NODE_ENV === "production";
 const BACKEND_URL = process.env.APP_URL || "http://localhost:5000";
-const FRONTEND_URL = process.env.APP_URL || "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 /**
  * Generate a unique transaction ID using crypto

@@ -40,5 +40,8 @@
     "pg": "^8.20.0",
     "sslcommerz-lts": "^1.2.0",
     "zod": "^4.3.6"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
