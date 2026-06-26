@@ -7418,23 +7418,42 @@ var import_sslcommerz_lts = __toESM(require("sslcommerz-lts"), 1);
 var import_crypto = __toESM(require("crypto"), 1);
 var STORE_ID = process.env.STORE_ID;
 var STORE_PASSWORD = process.env.STORE_PASSWORD;
-var IS_LIVE = process.env.NODE_ENV === "production";
-var BACKEND_URL = process.env.APP_URL || "http://localhost:5000";
-var FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+var IS_LIVE = process.env.PAYMENT_MODE === "LIVE";
+var BACKEND_URL = process.env.NODE_ENV === "production" ? process.env.PROD_BACKEND_URL || process.env.APP_URL || "https://assignment-4-backend-liart.vercel.app" : process.env.APP_URL || "http://localhost:5000";
+var FRONTEND_URL = process.env.NODE_ENV === "production" ? process.env.PROD_FRONTEND_URL || process.env.FRONTEND_URL || "https://assignment-4-frontend-red.vercel.app" : process.env.FRONTEND_URL || "http://localhost:3000";
+console.log("\u{1F4B3} Payment Configuration:");
+console.log("- Environment:", process.env.NODE_ENV);
+console.log("- Backend URL:", BACKEND_URL);
+console.log("- Frontend URL:", FRONTEND_URL);
+console.log("- SSLCommerz Mode:", IS_LIVE ? "LIVE \u26A0\uFE0F" : "SANDBOX \u2705");
+console.log("- Payment Mode Setting:", process.env.PAYMENT_MODE || "Not Set (Defaults to SANDBOX)");
 var generateTransactionId = () => {
   const timestamp = Date.now().toString(36);
   const randomPart = import_crypto.default.randomBytes(8).toString("hex");
   return `EDZ-${timestamp}-${randomPart}`.toUpperCase();
 };
 var initiatePayment = async (studentId, payload) => {
+  console.log("\u{1F680} Starting payment initiation...");
+  console.log("\u{1F4CB} Payload:", payload);
+  if (!STORE_ID || !STORE_PASSWORD) {
+    console.error("\u274C Missing SSLCommerz credentials!");
+    throw new Error("Payment gateway not configured. Please contact support.");
+  }
+  console.log("\u{1F511} SSLCommerz Credentials:");
+  console.log("- Store ID:", STORE_ID);
+  console.log("- Password Length:", STORE_PASSWORD?.length);
+  console.log("- Mode:", IS_LIVE ? "LIVE" : "SANDBOX");
   const tutor = await prisma.tutorProfile.findUnique({
     where: { id: payload.tutorId },
     include: { user: { select: { name: true } } }
   });
   if (!tutor) {
+    console.error("\u274C Tutor not found:", payload.tutorId);
     throw new Error("Tutor not found");
   }
+  console.log("\u2705 Tutor found:", tutor.user.name);
   const transactionId = generateTransactionId();
+  console.log("\u{1F516} Generated Transaction ID:", transactionId);
   const booking = await prisma.booking.create({
     data: {
       studentId,
@@ -7446,6 +7465,7 @@ var initiatePayment = async (studentId, payload) => {
       status: "PENDING"
     }
   });
+  console.log("\u2705 Booking created:", booking.id);
   const sslData = {
     total_amount: payload.amount,
     currency: "BDT",
@@ -7458,82 +7478,155 @@ var initiatePayment = async (studentId, payload) => {
     product_name: `Tutor Session with ${tutor.user.name}`,
     product_category: "Education",
     product_profile: "non-physical-goods",
-    cus_name: payload.studentName,
-    cus_email: payload.studentEmail,
-    cus_add1: payload.studentAddress || "Dhaka",
+    cus_name: payload.studentName || "Student",
+    cus_email: payload.studentEmail || "student@example.com",
+    cus_add1: payload.studentAddress || "Dhaka, Bangladesh",
     cus_city: "Dhaka",
     cus_state: "Dhaka",
     cus_postcode: "1000",
     cus_country: "Bangladesh",
-    cus_phone: payload.studentPhone || "01700000000"
+    cus_phone: payload.studentPhone || "01700000000",
+    cus_fax: "01700000000"
   };
+  console.log("\u{1F4B3} Initiating SSLCommerz Payment:");
+  console.log("- Transaction ID:", transactionId);
+  console.log("- Amount:", payload.amount);
+  console.log("- Success URL:", sslData.success_url);
+  console.log("- Fail URL:", sslData.fail_url);
+  console.log("- Cancel URL:", sslData.cancel_url);
   const sslcz = new import_sslcommerz_lts.default(STORE_ID, STORE_PASSWORD, IS_LIVE);
-  const apiResponse = await sslcz.init(sslData);
-  if (apiResponse?.GatewayPageURL) {
-    return {
-      gatewayUrl: apiResponse.GatewayPageURL,
-      transactionId,
-      bookingId: booking.id
-    };
-  } else {
+  try {
+    console.log("\u{1F4E1} Calling SSLCommerz API...");
+    const apiResponse = await sslcz.init(sslData);
+    console.log("\u{1F4E5} SSLCommerz Full Response:", JSON.stringify(apiResponse, null, 2));
+    if (apiResponse?.GatewayPageURL) {
+      console.log("\u2705 Payment gateway URL received:", apiResponse.GatewayPageURL);
+      return {
+        gatewayUrl: apiResponse.GatewayPageURL,
+        transactionId,
+        bookingId: booking.id
+      };
+    }
+    if (apiResponse?.status === "SUCCESS" && apiResponse?.data) {
+      console.log("\u2705 Payment gateway URL (alt format):", apiResponse.data);
+      return {
+        gatewayUrl: apiResponse.data,
+        transactionId,
+        bookingId: booking.id
+      };
+    }
+    if (apiResponse?.status === "FAILED") {
+      console.error("\u274C SSLCommerz returned FAILED status");
+      console.error("Reason:", apiResponse.failedreason);
+      await prisma.booking.update({
+        where: { id: booking.id },
+        data: { status: "FAILED" }
+      });
+      const failReason = String(apiResponse.failedreason || "Unknown error");
+      if (failReason.includes("Store Credential")) {
+        throw new Error(
+          "Payment gateway configuration error. You are using SANDBOX credentials in LIVE mode. Please either: 1) Get LIVE credentials from SSLCommerz, or 2) Set PAYMENT_MODE to SANDBOX in environment variables."
+        );
+      }
+      throw new Error(`Payment initialization failed: ${failReason}`);
+    }
+    console.error("\u274C SSLCommerz Init Failed - Unexpected response format");
+    console.error("Response:", apiResponse);
     await prisma.booking.update({
       where: { id: booking.id },
       data: { status: "FAILED" }
     });
-    throw new Error("Failed to initialize payment session with SSLCommerz");
+    throw new Error("Failed to initialize payment: Unexpected response from payment gateway");
+  } catch (error) {
+    console.error("\u274C SSLCommerz Init Error:", error);
+    console.error("Error details:", error.message);
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: "FAILED" }
+    });
+    if (error.message?.includes("ENOTFOUND") || error.message?.includes("getaddrinfo")) {
+      throw new Error("Cannot connect to payment gateway. Please check your internet connection.");
+    }
+    if (error.message?.includes("unauthorized") || error.message?.includes("401")) {
+      throw new Error("Invalid payment gateway credentials. Please contact support.");
+    }
+    throw new Error(error.message || "Failed to initialize payment session");
   }
 };
 var handlePaymentSuccess = async (payload) => {
-  const { tran_id, val_id } = payload;
+  const { tran_id, val_id, status } = payload;
+  console.log("\u{1F4B3} Processing Payment Success:");
+  console.log("- Transaction ID:", tran_id);
+  console.log("- Validation ID:", val_id);
+  console.log("- Status:", status);
   const booking = await prisma.booking.findUnique({
     where: { transactionId: tran_id }
   });
   if (!booking) {
+    console.error("\u274C Booking not found for transaction:", tran_id);
     throw new Error("Booking not found for this transaction");
   }
+  console.log("\u{1F4CB} Booking found:", booking.id, "- Current status:", booking.status);
   if (booking.status === "PAID") {
+    console.log("\u2705 Payment already processed");
     return booking;
   }
-  const sslcz = new import_sslcommerz_lts.default(STORE_ID, STORE_PASSWORD, IS_LIVE);
-  const validationResponse = await sslcz.validate({ val_id });
-  if (validationResponse.status === "VALID" || validationResponse.status === "VALIDATED") {
-    const updatedBooking = await prisma.booking.update({
-      where: { transactionId: tran_id },
-      data: { status: "PAID" }
-    });
-    return updatedBooking;
-  } else {
-    await prisma.booking.update({
-      where: { transactionId: tran_id },
-      data: { status: "FAILED" }
-    });
-    throw new Error("Payment validation failed");
+  try {
+    const sslcz = new import_sslcommerz_lts.default(STORE_ID, STORE_PASSWORD, IS_LIVE);
+    const validationResponse = await sslcz.validate({ val_id });
+    console.log("\u{1F50D} SSLCommerz Validation Response:", validationResponse);
+    if (validationResponse.status === "VALID" || validationResponse.status === "VALIDATED") {
+      const updatedBooking = await prisma.booking.update({
+        where: { transactionId: tran_id },
+        data: { status: "PAID" }
+      });
+      console.log("\u2705 Booking updated to PAID:", updatedBooking.id);
+      return updatedBooking;
+    } else {
+      console.error("\u274C Payment validation failed:", validationResponse);
+      await prisma.booking.update({
+        where: { transactionId: tran_id },
+        data: { status: "FAILED" }
+      });
+      throw new Error("Payment validation failed");
+    }
+  } catch (error) {
+    console.error("\u274C Error during payment validation:", error);
+    throw error;
   }
 };
 var handlePaymentFail = async (transactionId) => {
+  console.log("\u274C Processing Payment Fail for:", transactionId);
   const booking = await prisma.booking.findUnique({
     where: { transactionId }
   });
   if (!booking) {
+    console.error("\u274C Booking not found for transaction:", transactionId);
     throw new Error("Booking not found for this transaction");
   }
+  console.log("\u{1F4CB} Booking found:", booking.id, "- Current status:", booking.status);
   const updatedBooking = await prisma.booking.update({
     where: { transactionId },
     data: { status: "FAILED" }
   });
+  console.log("\u2705 Booking updated to FAILED:", updatedBooking.id);
   return updatedBooking;
 };
 var handlePaymentCancel = async (transactionId) => {
+  console.log("\u26A0\uFE0F Processing Payment Cancel for:", transactionId);
   const booking = await prisma.booking.findUnique({
     where: { transactionId }
   });
   if (!booking) {
+    console.error("\u274C Booking not found for transaction:", transactionId);
     throw new Error("Booking not found for this transaction");
   }
+  console.log("\u{1F4CB} Booking found:", booking.id, "- Current status:", booking.status);
   const updatedBooking = await prisma.booking.update({
     where: { transactionId },
     data: { status: "CANCELLED" }
   });
+  console.log("\u2705 Booking updated to CANCELLED:", updatedBooking.id);
   return updatedBooking;
 };
 var handleIPN = async (payload) => {
@@ -7583,7 +7676,7 @@ var PaymentService = {
 };
 
 // src/modules/payment/payment.controller.ts
-var FRONTEND_URL2 = process.env.FRONTEND_URL || "http://localhost:3000";
+var FRONTEND_URL2 = process.env.NODE_ENV === "production" ? process.env.PROD_FRONTEND_URL || process.env.FRONTEND_URL || "https://assignment-4-frontend-red.vercel.app" : process.env.FRONTEND_URL || "http://localhost:3000";
 var initiatePayment2 = async (req, res, next) => {
   try {
     const studentId = req.user?.id;
@@ -7625,31 +7718,37 @@ var initiatePayment2 = async (req, res, next) => {
 };
 var paymentSuccess = async (req, res, next) => {
   try {
+    console.log("\u2705 Payment Success Callback Received:", req.body);
     const payload = req.body;
     await PaymentService.handlePaymentSuccess(payload);
+    console.log(`\u2705 Redirecting to: ${FRONTEND_URL2}/payment/success?transactionId=${payload.tran_id}`);
     res.redirect(`${FRONTEND_URL2}/payment/success?transactionId=${payload.tran_id}`);
   } catch (error) {
-    console.error("Payment success handler error:", error);
+    console.error("\u274C Payment success handler error:", error);
     res.redirect(`${FRONTEND_URL2}/payment/fail`);
   }
 };
 var paymentFail = async (req, res, next) => {
   try {
+    console.log("\u274C Payment Fail Callback Received:", req.body);
     const { tran_id } = req.body;
     await PaymentService.handlePaymentFail(tran_id);
+    console.log(`\u274C Redirecting to: ${FRONTEND_URL2}/payment/fail?transactionId=${tran_id}`);
     res.redirect(`${FRONTEND_URL2}/payment/fail?transactionId=${tran_id}`);
   } catch (error) {
-    console.error("Payment fail handler error:", error);
+    console.error("\u274C Payment fail handler error:", error);
     res.redirect(`${FRONTEND_URL2}/payment/fail`);
   }
 };
 var paymentCancel = async (req, res, next) => {
   try {
+    console.log("\u26A0\uFE0F Payment Cancel Callback Received:", req.body);
     const { tran_id } = req.body;
     await PaymentService.handlePaymentCancel(tran_id);
+    console.log(`\u26A0\uFE0F Redirecting to: ${FRONTEND_URL2}/payment/cancel?transactionId=${tran_id}`);
     res.redirect(`${FRONTEND_URL2}/payment/cancel?transactionId=${tran_id}`);
   } catch (error) {
-    console.error("Payment cancel handler error:", error);
+    console.error("\u26A0\uFE0F Payment cancel handler error:", error);
     res.redirect(`${FRONTEND_URL2}/payment/cancel`);
   }
 };
@@ -7968,7 +8067,7 @@ var globalErrorHandler_default = globalErrorHandler;
 // src/app.ts
 var app = (0, import_express5.default)();
 app.use((0, import_cors.default)({
-  origin: ["http://localhost:3000", "http://localhost:5000"],
+  origin: [process.env.FRONTEND_URL, "http://localhost:3000", "http://localhost:5000"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]

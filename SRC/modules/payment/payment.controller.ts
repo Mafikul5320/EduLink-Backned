@@ -2,7 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import { PaymentService } from "./payment.service";
 import { ISSLCommerzCallbackPayload } from "./payment.interface";
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+// Use production frontend URL if in production, otherwise use local
+const FRONTEND_URL = process.env.NODE_ENV === "production" 
+  ? (process.env.PROD_FRONTEND_URL || process.env.FRONTEND_URL || "https://assignment-4-frontend-red.vercel.app")
+  : (process.env.FRONTEND_URL || "http://localhost:3000");
 
 /**
  * POST /api/payment/initiate
@@ -62,24 +65,31 @@ const initiatePayment = async (req: Request, res: Response, next: NextFunction) 
  */
 const paymentSuccess = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log(" Payment Success Callback Received:", req.body);
     const payload = req.body as ISSLCommerzCallbackPayload;
+    
+    // Validate payment
     await PaymentService.handlePaymentSuccess(payload);
+    
+    console.log(` Redirecting to: ${FRONTEND_URL}/payment/success?transactionId=${payload.tran_id}`);
+    
+    // Redirect to frontend success page
     res.redirect(`${FRONTEND_URL}/payment/success?transactionId=${payload.tran_id}`);
   } catch (error) {
-    console.error("Payment success handler error:", error);
+    console.error(" Payment success handler error:", error);
     res.redirect(`${FRONTEND_URL}/payment/fail`);
   }
 };
 
-/**
- * POST /api/payment/fail
- * SSLCommerz redirects here on failed payment
- * Updates booking status and redirects to frontend fail page
- */
+
 const paymentFail = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log(" Payment Fail Callback Received:", req.body);
     const { tran_id } = req.body as ISSLCommerzCallbackPayload;
+    
     await PaymentService.handlePaymentFail(tran_id);
+    
+    console.log(` Redirecting to: ${FRONTEND_URL}/payment/fail?transactionId=${tran_id}`);
     res.redirect(`${FRONTEND_URL}/payment/fail?transactionId=${tran_id}`);
   } catch (error) {
     console.error("Payment fail handler error:", error);
@@ -94,20 +104,20 @@ const paymentFail = async (req: Request, res: Response, next: NextFunction) => {
  */
 const paymentCancel = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log(" Payment Cancel Callback Received:", req.body);
     const { tran_id } = req.body as ISSLCommerzCallbackPayload;
+    
     await PaymentService.handlePaymentCancel(tran_id);
+    
+    console.log(` Redirecting to: ${FRONTEND_URL}/payment/cancel?transactionId=${tran_id}`);
     res.redirect(`${FRONTEND_URL}/payment/cancel?transactionId=${tran_id}`);
   } catch (error) {
-    console.error("Payment cancel handler error:", error);
+    console.error(" Payment cancel handler error:", error);
     res.redirect(`${FRONTEND_URL}/payment/cancel`);
   }
 };
 
-/**
- * POST /api/payment/ipn
- * Server-to-server IPN notification from SSLCommerz
- * Ensures database is updated even if user closes browser
- */
+
 const handleIPN = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const payload = req.body as ISSLCommerzCallbackPayload;
